@@ -1,7 +1,7 @@
 import { DefineModelConfig, FlamesConfig, FlamesConnectionOptions } from "./types.ts"
 import { PostgresConnection } from "./dialects/postgres/connection.ts"
-import { PoolClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts"
 import { Model } from "./Model.ts"
+import { PostgresPoolClient } from "../deps.ts"
 
 export class Flames {
   public config: FlamesConfig = {}
@@ -30,7 +30,7 @@ export class Flames {
     return await this._connection.getConnection()
   }
 
-  public async release(client: PoolClient) {
+  public async release(client: PostgresPoolClient) {
     return await this._connection.releaseConnection(client)
   }
 

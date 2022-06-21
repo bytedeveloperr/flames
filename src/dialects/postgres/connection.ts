@@ -1,9 +1,9 @@
-import { Pool, ClientOptions, PoolClient } from "https://deno.land/x/postgres@v0.16.1/mod.ts"
+import { PostgresClientOptions, PostgresPool, PostgresPoolClient } from "../../../deps.ts"
 import { FlamesConnectionOptions } from "../../types.ts"
 
 export class PostgresConnection {
-  private _client: Pool
-  private _config: ClientOptions
+  private _client: PostgresPool
+  private _config: PostgresClientOptions
 
   constructor(connection: FlamesConnectionOptions["connection"]) {
     this._config = {
@@ -15,7 +15,7 @@ export class PostgresConnection {
       tls: { enabled: false },
     }
 
-    this._client = new Pool(this._config, connection.poolSize || 20)
+    this._client = new PostgresPool(this._config, connection.poolSize || 20)
   }
 
   public async connect() {
@@ -26,7 +26,7 @@ export class PostgresConnection {
     return await this.connect()
   }
 
-  public async releaseConnection(client: PoolClient) {
+  public async releaseConnection(client: PostgresPoolClient) {
     await client.release()
   }
 }
