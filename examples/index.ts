@@ -1,5 +1,4 @@
-import { flames } from "../mod.ts"
-import { DataTypes } from "../src/types.ts"
+import { flames, DataTypes } from "../mod.ts"
 
 const config = {
   dialect: "postgres",
