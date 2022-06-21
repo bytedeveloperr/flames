@@ -61,5 +61,5 @@ Add some data to your database table :grin:
 
 ```js
 const user = await flames.user.create({ name: "Abdulrahman" })
-console.log(user)
+console.log(user) // { id: 1, name: "Abdulrahman" }
 ```
