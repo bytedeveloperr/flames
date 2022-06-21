@@ -13,6 +13,8 @@ const config = {
   },
 }
 
+await flames.connect(config)
+
 flames.define("User", {
   table: "users",
   columns: {
@@ -21,7 +23,6 @@ flames.define("User", {
   },
 })
 
-await flames.connect(config)
 await flames.sync()
 
 const user = await flames.user.create({ name: "Abdulrahman" })
