@@ -1,28 +1,22 @@
-import { flames, DataTypes } from "../mod.ts"
+import { flames } from "../mod.ts"
 
-const config = {
-  dialect: "postgres",
-  connection: {
-    username: "postgres",
-    password: "root",
-    database: "norva",
-    host: "localhost",
-    port: 5432,
-    poolSize: 2,
-  },
-}
-
-await flames.connect(config)
+await flames.connect()
 
 flames.define("User", {
   table: "users",
   columns: {
-    id: { type: DataTypes.INTEGER, autoIncrement: true },
-    name: { type: DataTypes.STRING },
+    id: { type: "integer", generated: true },
+    name: { type: "varchar" },
   },
 })
 
-await flames.sync()
+// const user = await flames.user.create({ name: "Abdulrahman" })
+// console.log(user)
 
-const user = await flames.user.create({ name: "Abdulrahman" })
-console.log(user)
+const users = await flames.user.find({ where: { name: "Abdulrahman" } })
+console.log(users)
+
+// twitter: undefined,
+//     face: "Book",
+//     $IN: { name: ["Baah", "Huuba", "Liii"], email: ["w@kl.d", "dje.d@el.e"] },
+//     $OR: { name: "AB", id: 5, c: "lll" },
