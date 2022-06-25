@@ -1,6 +1,6 @@
 # Flames
 
-> :warning: This project is still at the early development stage. DO NOT USE !!!
+> :warning: This project is still at the early development stage. A lot of things are constantly changing. DO NOT USE !!!
 
 Flames is a Deno ORM for SQL database. built to make database interactions super easy.
 
