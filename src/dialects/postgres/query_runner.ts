@@ -1,23 +1,19 @@
 import type { Flames } from "../../flames.ts"
 
-export class QueryRunner {
+export class PostgresQueryRunner {
   public flames: Flames
 
   constructor(flames: Flames) {
     this.flames = flames
   }
 
-  async runQuery(query: string | { args: {} | any[]; query: string }) {
-    const connection = await this.flames.connection()
-
+  async runQuery(query: string | { params: any[]; sql: string }) {
     let result
     if (typeof query === "string") {
-      result = await connection.queryObject(query)
+      result = await this.flames.query(query)
     } else {
-      result = await connection.queryObject(query.query, query.args)
+      result = await this.flames.query(query.sql, query.params)
     }
-
-    await this.flames.release(connection)
 
     if (result.command === "SELECT" || result.command === "INSERT") {
       return result.rows

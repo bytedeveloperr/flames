@@ -1,32 +1,32 @@
-import { PostgresClientOptions, PostgresPool, PostgresPoolClient } from "../../../deps.ts"
+import { PostgresClientOptions, PostgresPool } from "../../../deps.ts"
 import { FlamesConnectionOptions } from "../../types.ts"
 
 export class PostgresConnection {
   private _client: PostgresPool
-  private _config: PostgresClientOptions
+  private _options: PostgresClientOptions
 
-  constructor(connection: FlamesConnectionOptions["connection"]) {
-    this._config = {
-      port: connection.port!,
-      user: connection.username!,
-      hostname: connection.host!,
-      database: connection.database!,
-      password: connection.password!,
+  constructor(options: FlamesConnectionOptions) {
+    this._options = {
+      port: options.port!,
+      user: options.username!,
+      hostname: options.host!,
+      database: options.database!,
+      password: options.password!,
       tls: { enabled: false },
     }
 
-    this._client = new PostgresPool(this._config, connection.poolSize || 20)
+    this._client = new PostgresPool(this._options, options.poolSize || 20)
   }
 
   public async connect() {
     return await this._client.connect()
   }
 
-  public async getConnection() {
-    return await this.connect()
-  }
+  public async query(sql: string, params?: any[]) {
+    const connection = await this.connect()
+    const result = await connection.queryObject(sql, params)
 
-  public async releaseConnection(client: PostgresPoolClient) {
-    await client.release()
+    connection.release()
+    return result
   }
 }

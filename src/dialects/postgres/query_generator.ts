@@ -1,7 +1,7 @@
 import type { Flames } from "../../flames.ts"
-import { DataTypes, ColumnAttribute } from "../../types.ts"
+import { ColumnAttribute, ModelFindOptions } from "../../types.ts"
 
-export class QueryGenerator {
+export class PostgresQueryGenerator {
   public flames: Flames
 
   constructor(flames: Flames) {
@@ -22,8 +22,8 @@ export class QueryGenerator {
 
       arr.push(this.makeColumnQueryLine(name, column))
 
-      if (column.type === DataTypes.UUID) {
-        const query = this._createExtensionQuery(DataTypes.UUID)
+      if (column.type === "uuid") {
+        const query = this._createExtensionQuery("uuid")
 
         if (!prep.includes(query)) {
           prep += `${query}`
@@ -35,12 +35,12 @@ export class QueryGenerator {
   }
 
   public insertQuery(table: string, values: any, columns: { [key: string]: ColumnAttribute }) {
-    const output: {
-      args: string[]
+    const args: {
+      params: any[]
       columns: string[]
       placeholders: string[]
     } = {
-      args: [],
+      params: [],
       columns: [],
       placeholders: [],
     }
@@ -49,50 +49,80 @@ export class QueryGenerator {
     for (const key in columns) {
       const column = columns[key]
 
-      if (!column.autoIncrement) {
-        output.columns.push(key)
-        output.args.push(values[key])
-        output.placeholders.push(`$${index++}`)
+      if (!column.generated) {
+        args.columns.push(key)
+        args.params.push(values[key])
+        args.placeholders.push(`$${index++}`)
       }
     }
 
     return {
-      args: output.args,
-      query: `INSERT INTO ${table} (${output.columns.join(",")}) VALUES (${output.placeholders.join(
-        ","
-      )}) RETURNING *;`,
+      params: args.params,
+      sql: `INSERT INTO ${table} (${args.columns.join(",")}) VALUES (${args.placeholders.join(",")}) RETURNING *;`,
+    }
+  }
+
+  public findQuery(table: string, data: ModelFindOptions) {
+    let where = ""
+
+    const select: string[] = Array.isArray(data.select) ? data.select : ["*"]
+
+    if (data.where) {
+      for (const key in data.where) {
+        const value = data.where[key]
+
+        if (key === "$OR" && value && typeof value === "object") {
+          let or = ""
+          for (const k in value) {
+            or += `${!!or ? " OR" : ""} ${k} = '${value[k as keyof typeof value]}'`
+          }
+
+          where += `${!!where ? " AND" : ""} ${or}`
+        } else if (key === "$IN" && value && typeof value === "object") {
+          for (const k in value) {
+            where += `${!!where ? " AND" : ""} ${k} IN (${(value[k as keyof typeof value] as string[]).join(", ")})`
+          }
+        } else if (!value) {
+          where += `${!!where ? " AND" : ""} ${key} IS NULL`
+        } else {
+          where += `${!!where ? " AND" : ""} ${key} = '${value}'`
+        }
+      }
+    }
+
+    return {
+      sql: `SELECT ${select.join(", ")} FROM ${table}  ${!!where ? "WHERE " + where : ""}`,
     }
   }
 
   public makeColumnQueryLine(name: string, column: ColumnAttribute) {
     const _null = !column.nullable ? "NOT NULL" : undefined
     const _unique = column.unique ? "UNIQUE" : undefined
-    const _primaryKey = column.primaryKey ? "PRIMARY KEY" : undefined
-    const _autoIncrement = column.autoIncrement ? "SERIAL" : undefined
+    const _primaryKey = column.primary ? "PRIMARY KEY" : undefined
     const _default = column.default ? this._genDefault(column.default) : undefined
 
     let line = ` ${name}`
 
     switch (column.type) {
-      case DataTypes.STRING:
+      case "varchar":
         line += ` VARCHAR(${column.length || 255})`
         break
-      case DataTypes.UUID:
+      case "uuid":
         line += ` UUID`
         break
-      case DataTypes.BOOLEAN:
+      case "boolean":
         line += ` BOOLEAN`
         break
-      case DataTypes.INTEGER:
-        line += ` ${_autoIncrement || "INTEGER"}`
+      case "integer":
+        line += ` ${column.generated ? "SERIAL" : "INTEGER"}`
         break
-      case DataTypes.TEXT:
+      case "text":
         line += ` TEXT${column.length ? `(${column.length})` : ""}`
         break
-      case DataTypes.DECIMAL:
+      case "decimal":
         line = ` DECIMAL(${column.precision}, ${column.scale})`
         break
-      case DataTypes.TIMESTAMP:
+      case "timestamp":
         line = ` TIMESTAMP`
         break
       default:
@@ -128,7 +158,7 @@ export class QueryGenerator {
 
   private _createExtensionQuery(extension: string) {
     switch (extension) {
-      case "UUID":
+      case "uuid":
         return `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; \n`
       default:
         throw new Error(`Extension for ${extension} not supported`)

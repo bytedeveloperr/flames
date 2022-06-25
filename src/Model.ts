@@ -1,13 +1,11 @@
 import { Query } from "./Query.ts"
 import type { Flames } from "./flames.ts"
-import { ColumnAttribute, ModelOptions } from "./types.ts"
+import { ColumnAttribute, ModelCreateOptions, ModelFindOptions, ModelOptions } from "./types.ts"
 
 export class Model {
   private _query: Query
   private _table: string
   private _flames: Flames
-  private _queryRunner!: any
-  private _queryGenerator!: any
   private _columns: { [key: string]: ColumnAttribute } = {}
 
   constructor(table: string, columns: { [key: string]: ColumnAttribute }, options: ModelOptions) {
@@ -17,37 +15,34 @@ export class Model {
     this._query = new Query(this._flames)
   }
 
-  public async initialize() {
-    this._queryGenerator = await this._query.getQueryGenerator()
-    this._queryRunner = await this._query.getQueryRunner()
-
-    await this._sync()
-  }
-
-  private async _sync() {
-    const tableExistsQuery = this._queryGenerator.tableExistsQuery(this._table)
-    const [exists] = await this._queryRunner.runQuery(tableExistsQuery)
-
-    if (!exists) {
-      const createTableQuery = this._queryGenerator.createTableQuery(this._table, this._columns)
-      await this._queryRunner.runQuery(createTableQuery)
-    }
-  }
-
-  public async create(data: any) {
-    const insertQuery = this._queryGenerator.insertQuery(this._table, data, this._columns)
-    const [inserted] = await this._queryRunner.runQuery(insertQuery)
+  public async create(options: ModelCreateOptions) {
+    const insertQuery = this._query.generator.insertQuery(this._table, options.data, this._columns)
+    const [inserted] = await this._query.runner.runQuery(insertQuery)
 
     return this.build(inserted)
   }
 
-  public async build(data: any) {
-    const result: any = {}
+  public async find(options: ModelFindOptions) {
+    const findQuery = this._query.generator.findQuery(this._table, options)
+    const rows = await this._query.runner.runQuery(findQuery.sql)
 
+    return this.build(rows)
+  }
+
+  public build(data: any): any {
+    if (Array.isArray(data)) {
+      const result = []
+
+      for (let i = 0; i < data.length; i++) {
+        result.push(this.build(data[i]))
+      }
+      return result
+    }
+
+    const result: any = {}
     for (const key in this._columns) {
       result[key] = data[key]
     }
-
     return result
   }
 }

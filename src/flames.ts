@@ -1,37 +1,57 @@
-import { DefineModelConfig, FlamesConfig, FlamesConnectionOptions } from "./types.ts"
-import { PostgresConnection } from "./dialects/postgres/connection.ts"
 import { Model } from "./Model.ts"
-import { PostgresPoolClient } from "../deps.ts"
+import { CONFIG_FILE_PATH } from "../constants.ts"
+import { DefineModelConfig, FlamesConfig } from "./types.ts"
+import { PostgresConnection } from "./dialects/postgres/connection.ts"
+import { MysqlConnection } from "./dialects/mysql/connection.ts"
 
 export class Flames {
-  public config: FlamesConfig = {}
-  private _connection!: PostgresConnection
-  private _options!: FlamesConnectionOptions
+  private _config!: FlamesConfig
+  private _connection!: PostgresConnection | MysqlConnection
+  public config!: { dialect: string; database: string }
 
-  public async connect(options: FlamesConnectionOptions) {
-    this._options = options
-    this._connection = await this._initiateConnection()
+  public async connect() {
+    try {
+      const config = await this._getConfig()
 
-    this.config = { dialect: options.dialect, database: options.connection.database }
+      this._config = config
+      this._connection = this._getConnection()
+      this.config = { dialect: config.dialect, database: config.connection.database }
+
+      await this._connection.connect()
+    } catch (e) {
+      console.log(e)
+      Deno.exit(1)
+    }
   }
 
-  private async _initiateConnection() {
-    const { dialect, connection } = this._options
+  private _getConnection() {
+    const { dialect, connection } = this._config
 
     switch (dialect) {
       case "postgres":
         return new PostgresConnection(connection)
+      case "mysql":
+        return new MysqlConnection(connection)
       default:
         throw new Error(`Dialect ${dialect} is not supported`)
     }
   }
 
-  public async connection() {
-    return await this._connection.getConnection()
+  private async _getConfig(): Promise<FlamesConfig> {
+    try {
+      const { config }: { config: FlamesConfig } = await import(CONFIG_FILE_PATH)
+      return config
+    } catch (e) {
+      if (e.code === "ERR_MODULE_NOT_FOUND") {
+        throw new Error("Flames config file not found")
+      }
+      throw e
+    }
   }
 
-  public async release(client: PostgresPoolClient) {
-    return await this._connection.releaseConnection(client)
+  public async query(sql: string, args?: any[]) {
+    const result = await this._connection.query(sql, args)
+    return result
   }
 
   public define(name: string, config: DefineModelConfig) {
@@ -39,20 +59,6 @@ export class Flames {
     const model = new Model(table, config.columns, { flames: this })
 
     Object.defineProperty(this, name.toLowerCase(), { value: model })
-  }
-
-  public async sync() {
-    const props = Object.getOwnPropertyNames(this)
-
-    for (let i = 0; i < props.length; i++) {
-      const prop: any = props[i]
-      const descriptor = Object.getOwnPropertyDescriptor(this, prop)
-      const value = descriptor && descriptor.value
-
-      if (value instanceof Model) {
-        await value.initialize()
-      }
-    }
   }
 }
 

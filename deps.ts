@@ -1,2 +1,7 @@
 export { PoolClient as PostgresPoolClient, Pool as PostgresPool } from "https://deno.land/x/postgres@v0.16.1/mod.ts"
 export type { ClientOptions as PostgresClientOptions } from "https://deno.land/x/postgres@v0.16.1/mod.ts"
+export type { ClientConfig as MysqlClientConfig } from "https://deno.land/x/mysql@v2.10.2/mod.ts"
+export { Client as MysqlClient } from "https://deno.land/x/mysql@v2.10.2/mod.ts"
+export { Command } from "https://deno.land/x/cliffy@v0.24.2/mod.ts"
+export type { IAction } from "https://deno.land/x/cliffy@v0.24.2/mod.ts"
+export * as path from "https://deno.land/std@0.144.0/path/mod.ts"

@@ -1,21 +1,13 @@
 import type { Flames } from "./flames.ts"
 
-export enum DataTypes {
-  TEXT = "TEXT",
-  UUID = "UUID",
-  STRING = "STRING",
-  INTEGER = "INTEGER",
-  BOOLEAN = "BOOLEAN",
-  DECIMAL = "DECIMAL",
-  TIMESTAMP = "TIMESTAMP",
-}
+export type DataType = "varchar" | "text" | "integer" | "boolean" | "decimal" | "timestamp" | "uuid"
 
 export interface ColumnAttribute {
-  type: string
+  type: DataType
   nullable?: boolean
   unique?: boolean
-  primaryKey?: boolean
-  autoIncrement?: boolean
+  primary?: boolean
+  generated?: boolean
   length?: number
   updatedAt?: boolean
   precision?: number
@@ -28,24 +20,40 @@ export interface ModelOptions {
   timestamps?: true
 }
 
-export interface FlamesConnectionOptions {
-  dialect: string
-  connection: {
-    database: string
-    username?: string
-    password?: string
-    host?: string
-    port?: number
-    poolSize: number
-  }
-}
-
 export interface DefineModelConfig {
   table?: string
   columns: { [key: string]: ColumnAttribute }
 }
 
 export interface FlamesConfig {
-  dialect?: string
+  dialect: Dialect
   database?: string
+}
+
+export type Dialect = "postgres" | "mysql"
+
+export interface FlamesConfig {
+  dialect: Dialect
+  connection: FlamesConnectionOptions
+}
+
+export interface FlamesConnectionOptions {
+  database: string
+  username?: string
+  password?: string
+  host?: string
+  port?: number
+  poolSize?: number
+}
+
+export interface ModelCreateOptions {
+  data: Record<string, unknown>
+}
+
+export interface ModelFindOptions {
+  where?: Record<string, unknown> & {
+    $OR?: Record<string, unknown>
+    $IN?: Record<string, unknown[]>
+  }
+  select?: string[]
 }
